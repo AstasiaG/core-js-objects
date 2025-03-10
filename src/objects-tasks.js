@@ -192,9 +192,11 @@ function Rectangle(width, height) {
   this.width = width;
   this.height = height;
 
-  this.getArea = function () {
+  function calculateArea() {
     return this.width * this.height;
-  };
+  }
+
+  this.getArea = calculateArea;
 }
 
 /**

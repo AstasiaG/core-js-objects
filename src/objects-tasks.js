@@ -18,7 +18,7 @@
  *    shallowCopy({}) => {}
  */
 function shallowCopy(obj) {
-  return Object.fromEntries(Object.entries(obj));
+  return { ...obj };
 }
 
 /**
@@ -222,8 +222,11 @@ function getJSON(obj) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  const parsedObject = JSON.parse(json);
+  const obj = Object.create(proto);
+  Object.assign(obj, parsedObject);
+  return obj;
 }
 
 /**
@@ -252,8 +255,16 @@ function fromJSON(/* proto, json */) {
  *      { country: 'Russia',  city: 'Saint Petersburg' }
  *    ]
  */
-function sortCitiesArray(/* arr */) {
-  throw new Error('Not implemented');
+function sortCitiesArray(arr) {
+  return arr.sort((a, b) => {
+    if (a.country < b.country) return -1;
+    if (a.country > b.country) return 1;
+
+    if (a.city < b.city) return -1;
+    if (a.city > b.city) return 1;
+
+    return 0;
+  });
 }
 
 /**
@@ -286,8 +297,21 @@ function sortCitiesArray(/* arr */) {
  *    "Poland" => ["Lodz"]
  *   }
  */
-function group(/* array, keySelector, valueSelector */) {
-  throw new Error('Not implemented');
+function group(array, keySelector, valueSelector) {
+  const result = new Map();
+
+  array.forEach((item) => {
+    const key = keySelector(item);
+    const value = valueSelector(item);
+
+    if (!result.has(key)) {
+      result.set(key, []);
+    }
+
+    result.get(key).push(value);
+  });
+
+  return result;
 }
 
 /**
@@ -344,33 +368,116 @@ function group(/* array, keySelector, valueSelector */) {
  *  For more examples see unit tests.
  */
 
+class Selector {
+  constructor() {
+    this.parts = {
+      element: '',
+      ids: [],
+      classes: [],
+      attributes: [],
+      pseudoClasses: [],
+      pseudoElement: '',
+    };
+    this.combinations = [];
+  }
+
+  element(value) {
+    if (this.parts.element) throw new Error('Element can be set only once');
+    this.parts.element = value;
+    return this;
+  }
+
+  id(value) {
+    this.parts.ids.push(value);
+    return this;
+  }
+
+  class(value) {
+    this.parts.classes.push(value);
+    return this;
+  }
+
+  attr(value) {
+    this.parts.attributes.push(value);
+    return this;
+  }
+
+  pseudoClass(value) {
+    this.parts.pseudoClasses.push(value);
+    return this;
+  }
+
+  pseudoElement(value) {
+    if (this.parts.pseudoElement) {
+      throw new Error('Pseudo-element can be set only once');
+    }
+    this.parts.pseudoElement = value;
+    return this;
+  }
+
+  combine(selector1, combinator, selector2) {
+    this.combinations.push({
+      selector1,
+      combinator,
+      selector2,
+    });
+    return this;
+  }
+
+  stringify() {
+    if (this.combinations.length > 0) {
+      return this.combinations
+        .map((combo) => {
+          const parts = [
+            combo.selector1.stringify(),
+            combo.combinator,
+            combo.selector2.stringify(),
+          ];
+          return parts.join(' ').trim();
+        })
+        .join('');
+    }
+
+    let result = '';
+
+    if (this.parts.element) result += this.parts.element;
+    result += this.parts.ids.map((id) => `#${id}`).join('');
+    result += this.parts.classes.map((cls) => `.${cls}`).join('');
+    result += this.parts.attributes.map((attr) => `[${attr}]`).join('');
+    result += this.parts.pseudoClasses.map((pc) => `:${pc}`).join('');
+    if (this.parts.pseudoElement) result += `::${this.parts.pseudoElement}`;
+
+    return result;
+  }
+}
+
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    return new Selector().element(value);
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    return new Selector().id(value);
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    return new Selector().class(value);
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    return new Selector().attr(value);
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    return new Selector().pseudoClass(value);
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    return new Selector().pseudoElement(value);
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    return new Selector().combine(selector1, combinator, selector2);
   },
 };
 
